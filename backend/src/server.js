@@ -5,6 +5,7 @@ import compression from 'compression';
 import { createServer } from 'http';
 import { v4 as uuidv4 } from 'uuid';
 import chatRouter, { registerSseRoute } from './routes/chat.js';
+import { initSchema } from './db/index.js';
 import { getRedis } from './redis.js';
 
 const app = express();
@@ -12,6 +13,9 @@ app.use(cors());
 app.use(compression());
 app.use(express.json({ limit: '1mb' }));
  
+// Ensure DB schema exists (creates tables if missing)
+try { initSchema(); } catch (e) { console.warn('[db] initSchema failed:', e); }
+
 // Health
 app.get('/health', (_req, res) => {
   res.json({ ok: true });
