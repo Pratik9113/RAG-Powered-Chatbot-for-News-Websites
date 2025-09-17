@@ -14,15 +14,27 @@ Environment
 - REDIS_URL: redis://127.0.0.1:6379
 - DB_PATH: rag.db
 - SESSION_TTL_SECONDS: 86400 (1 day)
+- SESSION_HISTORY_MAX: max messages kept per session (default 200)
 - JINA_API_KEY: Jina embeddings key
 - GEMINI_API_KEY: Gemini key
 - GEMINI_MODEL: gemini-1.5-flash
 - RSS_FEEDS: comma separated RSS URLs
 - INGEST_MAX_ITEMS: cap items to embed
+- ANSWER_CACHE_TTL_SECONDS: cache TTL for final answers (default 600s)
+- QUERY_CACHE_TTL_SECONDS: cache TTL for query embedding/context (default 300s)
+- PERSIST_TRANSCRIPTS: if 'true', persist chat to SQLite `transcripts` (optional)
 
 Caching
 - Chat messages stored per-session in Redis list key session:{sessionId}:messages
 - TTL is refreshed on each message; configure via SESSION_TTL_SECONDS
+
+Cache Warming
+- On deploy, you can pre-warm by calling `/api/chat` with a set of common FAQs
+  or run a small script that batches common queries and primes `answer:*`, `qvec:*`, and `ctx:*` keys.
+  Example pseudo:
+  1) For each popular query, call retrieval once to compute and cache q-embedding and contexts
+  2) Call `/api/chat` to populate final answer cache
+  3) Set higher TTLs during warm-up via env if needed
 
 API
 - GET /health

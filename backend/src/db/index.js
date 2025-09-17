@@ -69,4 +69,9 @@ export function searchSimilar(db, queryVector, topK = 5) {
   return scored.slice(0, topK);
 }
 
-
+export function insertTranscript(db, { sessionId, role, content, contexts }) {
+  const stmt = db.prepare(
+    `INSERT INTO transcripts (session_id, role, content, contexts) VALUES (?, ?, ?, ?)`
+  );
+  stmt.run(sessionId, role, content, contexts ? JSON.stringify(contexts) : null);
+}

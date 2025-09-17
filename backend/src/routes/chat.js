@@ -1,6 +1,7 @@
 import express from 'express';
 import { v4 as uuidv4 } from 'uuid';
 import { getRedis } from '../redis.js';
+import { getDb, insertTranscript } from '../db/index.js';
 import { retrieveContexts } from '../services/retrieval.js';
 import { generateAnswer } from '../services/gemini.js';
 import { getCachedAnswer, setCachedAnswer } from '../services/cache.js';
@@ -9,6 +10,7 @@ const router = express.Router();
 
 const SESSION_TTL_SECONDS = parseInt(process.env.SESSION_TTL_SECONDS || '86400', 10);
 const HISTORY_MAX = parseInt(process.env.SESSION_HISTORY_MAX || '200', 10);
+const PERSIST = String(process.env.PERSIST_TRANSCRIPTS || 'false') === 'true';
 
 function sessionKey(sessionId) {
   return `session:${sessionId}:messages`;
@@ -34,12 +36,17 @@ router.post('/chat', async (req, res) => {
     await ensureSession(redis, sessionId);
 
     const key = sessionKey(sessionId);
+    const db = PERSIST ? getDb() : null;
     const userMsg = { role: 'user', content: message, ts: Date.now() };
     const pipe = redis.pipeline();
     pipe.rpush(key, JSON.stringify(userMsg));
     pipe.ltrim(key, -HISTORY_MAX, -1);
     pipe.expire(key, SESSION_TTL_SECONDS);
     await pipe.exec();
+
+    if (db) {
+      try { insertTranscript(db, { sessionId, role: 'user', content: message }); } catch {}
+    }
 
     const cached = await getCachedAnswer(message);
     let contexts, answer;
@@ -56,6 +63,10 @@ router.post('/chat', async (req, res) => {
     pipe2.ltrim(key, -HISTORY_MAX, -1);
     pipe2.expire(key, SESSION_TTL_SECONDS);
     await pipe2.exec();
+
+    if (db) {
+      try { insertTranscript(db, { sessionId, role: 'assistant', content: answer, contexts }); } catch {}
+    }
 
     res.json({ sessionId, answer, contexts });
   } catch (e) {
