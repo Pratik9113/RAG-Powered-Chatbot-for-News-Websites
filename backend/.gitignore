@@ -10,3 +10,4 @@
 ./db
 ./embeddings
 ./documents
+/env
