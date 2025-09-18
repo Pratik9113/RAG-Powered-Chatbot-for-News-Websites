@@ -16,6 +16,15 @@ function Header({ sessionId, activeTab, onTabChange, onReset, loading }) {
         >
           Chat
         </button>
+        <button
+          className={`tab-btn reset-btn`}
+          onClick={onReset}
+          disabled={loading}
+          title="Clear this session's history and start a new one"
+          style={{ marginLeft: 8 }}
+        >
+          {loading ? 'Resetting…' : 'Reset Session'}
+        </button>
       </div>
     </header>
   )
